@@ -51,8 +51,8 @@ type (
 )
 
 // NewFile creates a new file struct an populates it's fields
-func NewFile(uuid_ uuid.UUID, path string) File {
-	return File{uuid: uuid_, path: path}
+func NewFile(uuid uuid.UUID, path string) File {
+	return File{uuid: uuid, path: path}
 }
 
 // NewNamedTag creates a new NamedTag struct an populates it's fields

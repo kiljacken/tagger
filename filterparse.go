@@ -12,10 +12,6 @@ import (
 	"strconv"
 )
 
-var (
-	ErrEOF = errors.New("tagger: Unexpected EOF")
-)
-
 func makeErr(part, msg string) error {
 	return fmt.Errorf("tagger: Error while parsing %s:\n\t%s", part, msg)
 }
@@ -113,16 +109,16 @@ var tokenDefs = []tokenDef{
 
 func lexer(reader io.Reader) (*lex, error) {
 	// Read the whole input stream into a string
-	input_bytes, err := ioutil.ReadAll(reader)
+	inputBytes, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
 
 	// Convert input to string
-	input := string(input_bytes)
+	input := string(inputBytes)
 
 	// Prepare an empty array of tokens
-	tokens := make([]token, 0)
+	var tokens []token
 
 outer:
 	// Loop until we reach the end of our input
@@ -184,7 +180,7 @@ func (l *lex) Lex(lval *yySymType) int {
 	// If token is a comparator, convert the comparator to it's typed
 	// representation and store it in the destination struct
 	case tokComp:
-		lval.comp = ComparatorFromString(v.value)
+		lval.comp = comparatorFromString(v.value)
 
 	// If the token is a tag store it's value in the destination struct
 	case tokTag:

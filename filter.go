@@ -43,7 +43,7 @@ const (
 	GreaterThanOrEqual
 )
 
-func ComparatorFromString(val string) Comparator {
+func comparatorFromString(val string) Comparator {
 	switch val {
 	case "==":
 		return Equals
@@ -168,16 +168,16 @@ func (c ComparinsonFilter) String() string {
 }
 
 func (a AndFilter) String() string {
-	subs := make([]string, 0)
+	var subs []string
 	for _, f := range a.Filters {
 		subs = append(subs, f.String())
 	}
 	return fmt.Sprintf("(%s)", strings.Join(subs, ", "))
 }
 
-func (a OrFilter) String() string {
-	subs := make([]string, 0)
-	for _, f := range a.Filters {
+func (o OrFilter) String() string {
+	var subs []string
+	for _, f := range o.Filters {
 		subs = append(subs, f.String())
 	}
 	return fmt.Sprintf("(%s)", strings.Join(subs, ", "))

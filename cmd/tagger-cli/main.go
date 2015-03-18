@@ -11,9 +11,8 @@ import (
 	"strings"
 )
 
-const NAME = "tagger-cli"
-const VERSION = "0.0.1-alpha"
-const ARG_OFFSET = 1
+const version = "v0.0.1"
+const argOffset = 1
 
 type command struct {
 	f    func() error
@@ -27,7 +26,7 @@ var commandMap map[string]command
 func init() {
 	commands = []command{
 		{usage, "help", "prints a helpful usage message"},
-		{version, "version", "prints version information"},
+		{versionCmd, "version", "prints version information"},
 		// File manipulation
 		{addFile, "add", "adds a file to the tag database"},
 		{removeFile, "remove", "removes a file from the tag database"},
@@ -90,15 +89,15 @@ func getFileFromArg(arg string) (tagger.File, error) {
 	if strings.HasPrefix(arg, "uuid:") {
 		// Get the file matching the uuid
 		return provider.GetFile(uuid.Parse(arg[5:]))
-	} else {
-		// Get the file matching the file
-		return provider.GetFileForPath(arg)
 	}
+
+	// Get the file matching the file
+	return provider.GetFileForPath(arg)
 }
 
 func ensureArgs(n int, msg string) error {
-	if flag.NArg() < ARG_OFFSET+n {
-		return fmt.Errorf("Expected %d arguments, got %d.\nUsage: %s", n, flag.NArg()-ARG_OFFSET, msg)
+	if flag.NArg() < argOffset+n {
+		return fmt.Errorf("Expected %d arguments, got %d.\nUsage: %s", n, flag.NArg()-argOffset, msg)
 	}
 	return nil
 }
@@ -114,8 +113,8 @@ func usage() error {
 	return nil
 }
 
-func version() error {
-	fmt.Printf("%s v%s\n", NAME, VERSION)
+func versionCmd() error {
+	fmt.Printf("tagger-cli %s\n", version)
 	return nil
 }
 
@@ -125,7 +124,7 @@ func addFile() error {
 		return err
 	}
 
-	path := flag.Arg(ARG_OFFSET)
+	path := flag.Arg(argOffset)
 
 	// Create the new file
 	file := tagger.NewFile(uuid.NewUUID(), path)
@@ -148,7 +147,7 @@ func removeFile() error {
 		return err
 	}
 
-	path := flag.Arg(ARG_OFFSET)
+	path := flag.Arg(argOffset)
 
 	// Get the file matching the supplied argument
 	file, err := getFileFromArg(path)
@@ -166,8 +165,8 @@ func moveFile() error {
 		return err
 	}
 
-	src := flag.Arg(ARG_OFFSET)
-	dst := flag.Arg(ARG_OFFSET + 1)
+	src := flag.Arg(argOffset)
+	dst := flag.Arg(argOffset + 1)
 
 	// Get the file matching the supplied argument
 	file, err := getFileFromArg(src)
@@ -194,8 +193,8 @@ func setTag() error {
 		return err
 	}
 
-	path := flag.Arg(ARG_OFFSET)
-	name := flag.Arg(ARG_OFFSET + 1)
+	path := flag.Arg(argOffset)
+	name := flag.Arg(argOffset + 1)
 
 	// Get specified file
 	file, err := getFileFromArg(path)
@@ -205,9 +204,9 @@ func setTag() error {
 
 	// Depending on the amount of arguments, create a value tag or a named tag
 	var tag tagger.Tag
-	if flag.NArg() > ARG_OFFSET+2 {
+	if flag.NArg() > argOffset+2 {
 		// Parse tag value
-		value, err := strconv.Atoi(flag.Arg(ARG_OFFSET + 2))
+		value, err := strconv.Atoi(flag.Arg(argOffset + 2))
 		if err != nil {
 			return tagger.ErrInvalidValue
 		}
@@ -229,8 +228,8 @@ func unsetTag() error {
 		return err
 	}
 
-	path := flag.Arg(ARG_OFFSET)
-	name := flag.Arg(ARG_OFFSET + 1)
+	path := flag.Arg(argOffset)
+	name := flag.Arg(argOffset + 1)
 
 	// Get specified file
 	file, err := getFileFromArg(path)
@@ -251,7 +250,7 @@ func match() error {
 
 	// Stich filter together from arguments for user convinience
 	arg := ""
-	for i := ARG_OFFSET; i < flag.NArg(); i++ {
+	for i := argOffset; i < flag.NArg(); i++ {
 		arg = fmt.Sprintf("%s %s", arg, flag.Arg(i))
 	}
 
@@ -280,7 +279,7 @@ func get() error {
 	if err := ensureArgs(1, "get [file]"); err != nil {
 		return err
 	}
-	path := flag.Arg(ARG_OFFSET)
+	path := flag.Arg(argOffset)
 
 	// Get the provided file
 	file, err := getFileFromArg(path)

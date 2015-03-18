@@ -4,16 +4,17 @@ import (
 	"code.google.com/p/go-uuid/uuid"
 	"database/sql"
 	"github.com/kiljacken/tagger"
+	// Black import of go-sqlite3 to ensure the database engine is available
 	_ "github.com/mattn/go-sqlite3"
 	"log"
 )
 
+// SqliteStorage implents a tagger.StorageProvide backed by a sqlite database
 type SqliteStorage struct {
 	db *sql.DB
 }
 
 // NewSqliteStorage returns a new storage engine backed by an in memory sqlite database
-// TODO: Support file databases, maybe by passthrough of connection descriptor
 func NewSqliteStorage(descriptor string) (*SqliteStorage, error) {
 	// Open up a sqlite memory connection
 	db, err := sql.Open("sqlite3", descriptor)
@@ -84,12 +85,14 @@ func (s *SqliteStorage) init() {
 	}
 }
 
+// Close closes alle resources associated with the storage provider
 func (s *SqliteStorage) Close() error {
 	return s.db.Close()
 }
 
 const getFileStmt = `SELECT * FROM file WHERE uuid = ?`
 
+// GetFile returns the file matching the provided UUID.
 func (s *SqliteStorage) GetFile(u uuid.UUID) (tagger.File, error) {
 	// Prepare the statement
 	st, err := s.db.Prepare(getFileStmt)
@@ -103,8 +106,8 @@ func (s *SqliteStorage) GetFile(u uuid.UUID) (tagger.File, error) {
 	row := st.QueryRow(u.String())
 
 	// Get the values from the row
-	var rowUuid, path sql.NullString
-	err = row.Scan(&rowUuid, &path)
+	var rowUUID, path sql.NullString
+	err = row.Scan(&rowUUID, &path)
 	if err == sql.ErrNoRows {
 		// If no row was found, no such file exists
 		return tagger.File{}, tagger.ErrNoFile
@@ -114,11 +117,12 @@ func (s *SqliteStorage) GetFile(u uuid.UUID) (tagger.File, error) {
 	}
 
 	// Construct a file struct and return it
-	return tagger.NewFile(uuid.Parse(rowUuid.String), path.String), nil
+	return tagger.NewFile(uuid.Parse(rowUUID.String), path.String), nil
 }
 
 const getFileForPathStmt = `SELECT * FROM file WHERE path = ?`
 
+// GetFileForPath returns the file at the given path.
 func (s *SqliteStorage) GetFileForPath(path string) (tagger.File, error) {
 	// Prepare the statement
 	st, err := s.db.Prepare(getFileForPathStmt)
@@ -132,8 +136,8 @@ func (s *SqliteStorage) GetFileForPath(path string) (tagger.File, error) {
 	row := st.QueryRow(path)
 
 	// Get the values from the row
-	var rowUuid, rowPath sql.NullString
-	err = row.Scan(&rowUuid, &rowPath)
+	var rowUUID, rowPath sql.NullString
+	err = row.Scan(&rowUUID, &rowPath)
 	if err == sql.ErrNoRows {
 		// If no row was found, no such file exists
 		return tagger.File{}, tagger.ErrNoFile
@@ -143,11 +147,12 @@ func (s *SqliteStorage) GetFileForPath(path string) (tagger.File, error) {
 	}
 
 	// Construct a file struct and return it
-	return tagger.NewFile(uuid.Parse(rowUuid.String), rowPath.String), nil
+	return tagger.NewFile(uuid.Parse(rowUUID.String), rowPath.String), nil
 }
 
 const getAllFilesStmt = `SELECT * FROM file`
 
+// GetAllFiles returns a slice containing all files in the storage provider
 func (s *SqliteStorage) GetAllFiles() ([]tagger.File, error) {
 	// Prepare the statement
 	st, err := s.db.Prepare(getAllFilesStmt)
@@ -167,19 +172,19 @@ func (s *SqliteStorage) GetAllFiles() ([]tagger.File, error) {
 	defer rows.Close()
 
 	// Create an empty array of files
-	files := make([]tagger.File, 0)
+	var files []tagger.File
 
 	// Loop through each row in the query
 	for rows.Next() {
 		// Get the values from the row
-		var rowUuid, path sql.NullString
-		err = rows.Scan(&rowUuid, &path)
+		var rowUUID, path sql.NullString
+		err = rows.Scan(&rowUUID, &path)
 		if err != nil {
 			// If an error occured, return the error
 			return nil, err
 		}
 
-		files = append(files, tagger.NewFile(uuid.Parse(rowUuid.String), path.String))
+		files = append(files, tagger.NewFile(uuid.Parse(rowUUID.String), path.String))
 	}
 
 	// If an error occured during the query, return the error
@@ -191,10 +196,12 @@ func (s *SqliteStorage) GetAllFiles() ([]tagger.File, error) {
 	return files, nil
 }
 
+// GetMatchingFiles returns all files from the storage provider that matches
+// the provided filter.
 func (s *SqliteStorage) GetMatchingFiles(f tagger.Filter) ([]tagger.File, error) {
 	// XXX: This is really bad practice. Database engines should make optimized
 	// sql statements for filtering.
-	matches := make([]tagger.File, 0)
+	var matches []tagger.File
 
 	// Get ALL files
 	files, err := s.GetAllFiles()
@@ -222,6 +229,7 @@ func (s *SqliteStorage) GetMatchingFiles(f tagger.Filter) ([]tagger.File, error)
 
 const updateTagStmt = `INSERT OR REPLACE INTO tags (uuid, name, value) VALUES (?, ?, ?)`
 
+// UpdateTag updates a tag on the file or creates it if it doesn't exist.
 func (s *SqliteStorage) UpdateTag(f tagger.File, t tagger.Tag) error {
 	// Prepare the statement
 	st, err := s.db.Prepare(updateTagStmt)
@@ -249,6 +257,7 @@ func (s *SqliteStorage) UpdateTag(f tagger.File, t tagger.Tag) error {
 
 const removeTagStmt = `DELETE FROM tags WHERE uuid = ? AND name = ?`
 
+// RemoveTag removes a tag from a file.
 func (s *SqliteStorage) RemoveTag(f tagger.File, t tagger.Tag) error {
 	// Prepare the statement
 	st, err := s.db.Prepare(removeTagStmt)
@@ -271,6 +280,7 @@ func (s *SqliteStorage) RemoveTag(f tagger.File, t tagger.Tag) error {
 
 const getTagsStmt = `SELECT name, value FROM tags WHERE uuid = ?`
 
+// GetTags gets all tags associated with a file
 func (s *SqliteStorage) GetTags(f tagger.File) ([]tagger.Tag, error) {
 	// Prepare the statement
 	st, err := s.db.Prepare(getTagsStmt)
@@ -290,7 +300,7 @@ func (s *SqliteStorage) GetTags(f tagger.File) ([]tagger.Tag, error) {
 	defer rows.Close()
 
 	// Create an empty array of tags
-	tags := make([]tagger.Tag, 0)
+	var tags []tagger.Tag
 
 	// Loop through each row in the query
 	for rows.Next() {
@@ -326,6 +336,8 @@ func (s *SqliteStorage) GetTags(f tagger.File) ([]tagger.Tag, error) {
 
 const updateFileStmt = `INSERT OR REPLACE INTO file (uuid, path) VALUES (?, ?)`
 
+// UpdateFile updates all files associated with the provided file. If the file
+// doesn't exist in the storage provider, it is created.
 func (s *SqliteStorage) UpdateFile(f tagger.File, t []tagger.Tag) error {
 	// Prepare the statement
 	st, err := s.db.Prepare(updateFileStmt)
@@ -356,6 +368,7 @@ func (s *SqliteStorage) UpdateFile(f tagger.File, t []tagger.Tag) error {
 
 const removeFileStmt = `DELETE FROM file WHERE uuid = ?`
 
+// RemoveFile removes a file from the storage provider
 func (s *SqliteStorage) RemoveFile(f tagger.File) error {
 	// Loop through all tags associated with the file and remove them
 	tags, err := s.GetTags(f)
