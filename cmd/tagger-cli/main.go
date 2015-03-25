@@ -46,30 +46,57 @@ func init() {
 	}
 }
 
+var config = flag.String("config", DefaultPath(), "specifiy a configuration file")
+
 var provider tagger.StorageProvider
+var configuration *Configuration
 
 func main() {
-	// TODO: os.Exit(?) prohibits defers from executing. this could be bad
+	if ok := realMain(); !ok {
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+func realMain() bool {
 	flag.Parse()
 
 	if flag.NArg() < 1 {
 		usage()
-		os.Exit(1)
+		return false
 	}
 
+	// Load configuration
+	configuration = DefaultConfiguration()
+	if _, err := os.Stat(*config); !os.IsNotExist(err) {
+		f, err := os.Open(*config)
+		if err != nil {
+			fmt.Printf("Error while reading config: %s\n", err)
+			return false
+		}
+
+		if err := configuration.Read(f); err != nil {
+			fmt.Printf("Error while reading config: %s\n", err)
+			return false
+		}
+
+		_ = f.Close()
+	}
+
+	// Parse command
 	passedCmd := flag.Arg(0)
 	cmd, ok := commandMap[passedCmd]
 	if !ok {
 		fmt.Printf("Unknown command: %s\n", passedCmd)
 		usage()
-		os.Exit(1)
+		return false
 	}
 
 	// Setup storage provider
-	prov, err := storage.NewSqliteStorage("./test.db") //":memory:")
+	prov, err := storage.NewSqliteStorage(configuration.DatabasePath())
 	if err != nil {
 		fmt.Printf("Error while opening storage: %s\n", err)
-		os.Exit(1)
+		return false
 	}
 	provider = prov
 	defer provider.Close()
@@ -77,11 +104,25 @@ func main() {
 	// Execute the command
 	if err = cmd.f(); err != nil {
 		fmt.Printf("Error while executing command: %s\n", err)
-		os.Exit(1)
+		return false
+	}
+
+	// Save configuration
+	f, err := os.Create(*config)
+	if err != nil {
+		fmt.Printf("Error while saving configuration: %s\n", err)
+		return false
+	}
+	defer f.Close()
+
+	err = configuration.Write(f)
+	if err != nil {
+		fmt.Printf("Error while saving configuration: %s\n", err)
+		return false
 	}
 
 	// Exit with error code 0
-	os.Exit(0)
+	return true
 }
 
 func getFileFromArg(arg string) (tagger.File, error) {
