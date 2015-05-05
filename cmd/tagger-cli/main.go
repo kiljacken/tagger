@@ -1,9 +1,9 @@
 package main
 
 import (
-	"code.google.com/p/go-uuid/uuid"
 	"flag"
 	"fmt"
+	"github.com/kiljacken/go-uuid/uuid"
 	"github.com/kiljacken/tagger"
 	"github.com/kiljacken/tagger/storage"
 	"os"

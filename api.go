@@ -1,8 +1,8 @@
 package tagger
 
 import (
-	"code.google.com/p/go-uuid/uuid"
 	"errors"
+	"github.com/kiljacken/go-uuid/uuid"
 	"io"
 )
 

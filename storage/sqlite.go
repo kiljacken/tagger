@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"code.google.com/p/go-uuid/uuid"
 	"database/sql"
+	"github.com/kiljacken/go-uuid/uuid"
 	"github.com/kiljacken/tagger"
 	// Black import of go-sqlite3 to ensure the database engine is available
 	_ "github.com/mattn/go-sqlite3"
